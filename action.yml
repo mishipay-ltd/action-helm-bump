@@ -1,0 +1,66 @@
+name: Helm Bump Action
+author: James Williams <james@mishipay.com>
+description: >-
+  A GitHub action to bump a helm charts appVersion for a microservice after release. The
+  version of the chart itself is bumped by 0.1.0 (minor).
+inputs:
+  token:
+    description: GitHub PAT with write access to the helm chart repo.
+    required: true
+  charts-repo:
+    description: Address of the helm chart repo.
+    required: true
+    default: mishipay-ltd/helm-charts
+  charts-dir:
+    description: The directory in the chart repo containing the charts.
+    required: true
+    default: charts
+  chart-name:
+    description: The directory name of the helm chart to bump.
+    required: true
+  app-version:
+    description: The SemVer tag to bump the charts appVersion to.
+    required: true
+  pybump-version:
+    description: The version of pybump to use for version bumps (default latest).
+    required: false
+
+outputs:
+  chart-version:
+    description: The new SemVer version of the modified helm chart.
+    value: ${{ steps.bump-version.outputs.chart-version }}
+  pull-request-url:
+    description: The URL of the pull request created.
+    value: ${{ steps.pull-request.outputs.pull-request-url }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v2
+      with:
+        token: ${{ inputs.token }}
+        repository: ${{ inputs.charts-repo }}
+    - name: Bump ${{ inputs.chart-name }}.appVersion to ${{ inputs.app-version }}
+      id: bump-version
+      run: echo "::set-output name=chart-version::$(./helm-bump.sh)"
+      shell: bash
+      env:
+        CHARTS_DIR: ${{ inputs.charts-dir }}
+        CHART_NAME: ${{ inputs.chart-name }}
+        APP_VERSION: ${{ inputs.app-version }}
+        PYBUMP_VERSION: ${{ inputs.pybump-version }}
+    - name: >-
+        Create pull request for ${{ inputs.chart-name }}@${{
+        steps.bump-version.outputs.chart-version }}
+      id: pull-request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        token: ${{ inputs.token }}
+        commit-message: >-
+          Bump ${{ inputs.chart-name }}.appVersion to ${{ inputs.app-version }}
+        branch: ${{ inputs.chart-name }}-appversion-bump-${{ inputs.app-version }}
+        title: Bump ${{ inputs.chart-name }}.appVersion to ${{ inputs.app-version }}
+        body: >-
+          Automatically created by
+          [action-helm-bump](https://github.com/mishipay-ltd/action-helm-bump) GitHub
+          action.
