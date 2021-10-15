@@ -43,7 +43,9 @@ runs:
         repository: ${{ inputs.charts-repo }}
     - name: Bump ${{ inputs.chart-name }}.appVersion to ${{ inputs.app-version }}
       id: bump-version
-      run: echo "::set-output name=chart-version::$(./helm-bump.sh)"
+      run: >-
+        echo "::set-output name=chart-version::$(${{ github.action_path
+        }}/helm-bump.sh)"
       shell: bash
       env:
         CHARTS_DIR: ${{ inputs.charts-dir }}
